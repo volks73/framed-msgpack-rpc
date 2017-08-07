@@ -10,10 +10,16 @@ pub struct Codec {
 }
 
 impl Codec {
+    /// Creates a new `Codec`.
     pub fn new() -> Self {
         Codec {
             inner: FramedMsgpack::new()
         }
+    }
+    
+    /// Consumes the `Codec`, returning its underlying framed-msgpack codec.
+    pub fn into_inner(self) -> FramedMsgpack {
+        self.inner
     }
 }
 

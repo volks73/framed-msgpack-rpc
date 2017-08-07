@@ -73,36 +73,9 @@ impl Message {
 
     pub fn to_value(self) -> Value {
         match self {
-            Message::Request(Request {
-                id,
-                ref method,
-                ref params,
-            }) => Value::Array(vec![
-                Value::Integer(Integer::from(REQUEST_MESSAGE)),
-                Value::Integer(Integer::from(id)),
-                Value::String(Utf8String::from(method.as_str())),
-                Value::Array(params.clone()),
-            ]),
-            Message::Response(Response { id, ref result }) => {
-                let (error, result) = match *result {
-                    Ok(ref result) => (Value::Nil, result.to_owned()),
-                    Err(ref err) => (err.to_owned(), Value::Nil),
-                };
-                Value::Array(vec![
-                    Value::Integer(Integer::from(RESPONSE_MESSAGE)),
-                    Value::Integer(Integer::from(id)),
-                    error,
-                    result,
-                ])
-            }
-            Message::Notification(Notification {
-                ref method,
-                ref params,
-            }) => Value::Array(vec![
-                Value::Integer(Integer::from(NOTIFICATION_MESSAGE)),
-                Value::String(Utf8String::from(method.as_str())),
-                Value::Array(params.to_owned()),
-            ]),
+            Message::Request(r) => r.into_value(),
+            Message::Response(r) => r.into_value(),
+            Message::Notification(n) => n.into_value(),
         }
     }
 }
@@ -112,7 +85,6 @@ impl Notification {
         if array.len() != 3 {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "The notification does not have three array elements"))
         }
-
         let method = if let Value::String(ref method) = array[1] {
             method
                 .as_str()
@@ -121,17 +93,25 @@ impl Notification {
         } else {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "The notification does not have a method"));
         };
-
         let params = if let Value::Array(ref params) = array[2] {
             params.clone()
         } else {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "The notification does not have any parameters"));
         };
-
         Ok(Notification {
             method: method,
             params: params,
         })
+    }
+
+    fn into_value(self) -> Value {
+        Value::Array(
+            vec![
+                Value::Integer(Integer::from(NOTIFICATION_MESSAGE)),
+                Value::String(Utf8String::from(self.method.as_str())),
+                Value::Array(self.params.to_owned()),
+            ]
+        )
     }
 }
 
@@ -140,7 +120,6 @@ impl Request {
         if array.len() != 4 {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "The request does not have four array elements"));
         }
-
         let id = if let Value::Integer(id) = array[1] {
             id.as_u64()
                 .and_then(|id| Some(id as u32))
@@ -148,7 +127,6 @@ impl Request {
         } else {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "The request does not have an ID"));
         };
-
         let method = if let Value::String(ref method) = array[2] {
             method
                 .as_str()
@@ -157,18 +135,25 @@ impl Request {
         } else {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "The request does not have a method"));
         };
-
         let params = if let Value::Array(ref params) = array[3] {
             params.clone()
         } else {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "The request does not have any parameters"));
         };
-
         Ok(Request {
             id: id,
             method: method,
             params: params,
         })
+    }
+
+    fn into_value(self) -> Value {
+        Value::Array(vec![
+            Value::Integer(Integer::from(REQUEST_MESSAGE)),
+            Value::Integer(Integer::from(self.id)),
+            Value::String(Utf8String::from(self.method.as_str())),
+            Value::Array(self.params),
+        ])
     }
 }
 
@@ -177,7 +162,6 @@ impl Response {
         if array.len() != 4 {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "The response does not have four array elements"));
         }
-
         let id = if let Value::Integer(id) = array[1] {
             id.as_u64()
                 .and_then(|id| Some(id as u32))
@@ -185,7 +169,6 @@ impl Response {
         } else {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "The response does not have an ID"));
         };
-
         match array[2] {
             Value::Nil => Ok(Response {
                 id: id,
@@ -196,6 +179,19 @@ impl Response {
                 result: Err(error.clone()),
             }),
         }
+    }
+
+    fn into_value(self) -> Value {
+        let (error, result) = match self.result {
+            Ok(ref result) => (Value::Nil, result.to_owned()),
+            Err(ref err) => (err.to_owned(), Value::Nil),
+        };
+        Value::Array(vec![
+            Value::Integer(Integer::from(RESPONSE_MESSAGE)),
+            Value::Integer(Integer::from(self.id)),
+            error,
+            result,
+        ])
     }
 }
 
