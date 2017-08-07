@@ -1,7 +1,7 @@
 //! A simple TCP echo server using framed-msgpack-rpc codec.
 //!
-//! Msgpack-rpc requests are received and responses are just the requests sent back to the client as
-//! a msgpack-rpc response.
+//! MessagePack-RPC messages, i.e. Request, Response, and Notifications, are received from a client
+//! and transmitted back without modification (echo).
 
 extern crate framed_msgpack_rpc;
 extern crate futures;
@@ -43,24 +43,7 @@ impl Service for Echo {
     type Future = BoxFuture<Self::Response, Self::Error>;
 
     fn call(&self, msg: Self::Request) -> Self::Future {
-        let res = match msg {
-            Message::Request(r) => {
-                Message::Response(Response {
-                    id: r.id,
-                    result: Ok(Value::Array(r.params))
-                })
-            },
-            Message::Response(r) => {
-                Message::Response(Response {
-                    id: r.id,
-                    result: Err(Value::String(Utf8String::from("The message is not a request")))
-                })
-            },
-            Message::Notification(_) => {
-                panic!("Notifications not supported");
-            },
-        };
-        future::ok(res).boxed()
+        future::ok(msg).boxed()
     }
 }
 
