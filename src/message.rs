@@ -43,6 +43,10 @@ const RESPONSE_MESSAGE: u64 = 1;
 const NOTIFICATION_MESSAGE: u64 = 2;
 
 impl Message {
+    /// Converts a MessagePack value to a MessagePack-RPC message.
+    ///
+    /// This conversion can fail if the MessagePack value does not match the msgpack-rpc
+    /// specification.
     pub fn from_value(v: Value) -> io::Result<Message> {
         if let Value::Array(ref array) = v {
             if array.len() < 3 {
@@ -71,6 +75,7 @@ impl Message {
         }
     }
 
+    /// Consumes this `Message` and converts it to a MessagePack value.
     pub fn to_value(self) -> Value {
         match self {
             Message::Request(r) => r.into_value(),
