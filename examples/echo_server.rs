@@ -11,9 +11,8 @@ extern crate tokio_proto;
 extern crate tokio_service;
 
 use framed_msgpack_rpc::Codec;
-use framed_msgpack_rpc::message::{Message, Response};
+use framed_msgpack_rpc::message::Message;
 use futures::{future, Future, BoxFuture};
-use rmpv::{Utf8String, Value};
 use std::io;
 use tokio_io::{AsyncRead, AsyncWrite};
 use tokio_io::codec::Framed;
