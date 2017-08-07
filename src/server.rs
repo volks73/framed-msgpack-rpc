@@ -10,8 +10,8 @@ use std::error::Error;
 use tokio_io::{AsyncRead, AsyncWrite};
 use tokio_io::codec::Framed;
 
-/// The `Service` trait defines how the server handles the requests and notifications it receives.
-pub trait Service {
+/// The `Handler` trait defines how the server handles the requests and notifications it receives.
+pub trait Handler {
     type Error: Error;
     type T: Into<Value>;
     type E: Into<Value>;
@@ -23,28 +23,28 @@ pub trait Service {
     fn handle_notification(&mut self, method: &str, params: &[Value]) -> BoxFuture<(), Self::Error>;
 }
 
-/// Since a new `Service` is created for each client, it is necessary to have a builder type that
-/// implements the `ServiceBuilder` trait.
-pub trait ServiceBuilder {
-    type Service: Service + 'static;
+/// Since a new `Handler` is created for each client, it is necessary to have a builder type that
+/// implements the `HandlerBuilder` trait.
+pub trait HandlerBuilder {
+    type Handler: Handler + 'static;
 
-    /// Creates the service.
-    fn build(&self) -> Self::Service;
+    /// Creates the handler.
+    fn build(&self) -> Self::Handler;
 }
 
 /// A MessagePack-RPC server that can handle requests and notifications.
-pub struct Server<T: AsyncRead + AsyncWrite, S: Service> {
-    service: S,
+pub struct Server<T: AsyncRead + AsyncWrite, H: Handler> {
+    handler: H,
     io: Framed<T, Codec>,
-    request_tasks: HashMap<u32, BoxFuture<Result<S::T, S::E>, S::Error>>,
-    notification_tasks: Vec<BoxFuture<(), S::Error>>,
+    request_tasks: HashMap<u32, BoxFuture<Result<H::T, H::E>, H::Error>>,
+    notification_tasks: Vec<BoxFuture<(), H::Error>>,
 }
 
-impl<T: AsyncRead + AsyncWrite + 'static, S: Service + 'static> Server<T, S> {
+impl<T: AsyncRead + AsyncWrite + 'static, H: Handler + 'static> Server<T, H> {
     /// Creates a new `Server`.
-    pub fn new(service: S, io: T) -> Self {
+    pub fn new(handler: H, io: T) -> Self {
         Server {
-            service: service,
+            handler: handler,
             io: io.framed(Codec::new()),
             request_tasks: HashMap::new(),
             notification_tasks: Vec::new(),
@@ -56,13 +56,13 @@ impl<T: AsyncRead + AsyncWrite + 'static, S: Service + 'static> Server<T, S> {
             Message::Request(request) => {
                 let method = request.method.as_str();
                 let params = request.params;
-                let response = self.service.handle_request(method, &params);
+                let response = self.handler.handle_request(method, &params);
                 self.request_tasks.insert(request.id, response);
             }
             Message::Notification(notification) => {
                 let method = notification.method.as_str();
                 let params = notification.params;
-                let outcome = self.service.handle_notification(method, &params);
+                let outcome = self.handler.handle_notification(method, &params);
                 self.notification_tasks.push(outcome);
             }
             Message::Response(_) => {
@@ -112,7 +112,7 @@ impl<T: AsyncRead + AsyncWrite + 'static, S: Service + 'static> Server<T, S> {
     }
 }
 
-impl<T: AsyncRead + AsyncWrite + 'static, S: Service + 'static> Future for Server<T, S> {
+impl<T: AsyncRead + AsyncWrite + 'static, H: Handler + 'static> Future for Server<T, H> {
     type Item = ();
     type Error = io::Error;
 
