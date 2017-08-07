@@ -78,9 +78,9 @@ impl Message {
     /// Consumes this `Message` and converts it to a MessagePack value.
     pub fn to_value(self) -> Value {
         match self {
-            Message::Request(r) => r.into_value(),
-            Message::Response(r) => r.into_value(),
-            Message::Notification(n) => n.into_value(),
+            Message::Request(r) => r.to_value(),
+            Message::Response(r) => r.to_value(),
+            Message::Notification(n) => n.to_value(),
         }
     }
 }
@@ -109,7 +109,7 @@ impl Notification {
         })
     }
 
-    fn into_value(self) -> Value {
+    fn to_value(self) -> Value {
         Value::Array(
             vec![
                 Value::Integer(Integer::from(NOTIFICATION_MESSAGE)),
@@ -152,7 +152,7 @@ impl Request {
         })
     }
 
-    fn into_value(self) -> Value {
+    fn to_value(self) -> Value {
         Value::Array(vec![
             Value::Integer(Integer::from(REQUEST_MESSAGE)),
             Value::Integer(Integer::from(self.id)),
@@ -186,7 +186,7 @@ impl Response {
         }
     }
 
-    fn into_value(self) -> Value {
+    fn to_value(self) -> Value {
         let (error, result) = match self.result {
             Ok(ref result) => (Value::Nil, result.to_owned()),
             Err(ref err) => (err.to_owned(), Value::Nil),

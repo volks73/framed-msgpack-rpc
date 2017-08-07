@@ -6,7 +6,7 @@
 //! This can be used with the tokio-proto crate.
 //!
 //! ```
-//! use framed_msgpack_rpc::Codec;
+//! use framed_msgpack_rpc::{Codec, Message};
 //! use tokio_io::{AsyncRead, AsyncWrite};
 //! use tokio_io::codec::Framed;
 //! use tokio_proto::pipeline::ServerProto;
@@ -14,8 +14,8 @@
 //! struct FramedMsgpackRpcProto;
 //! 
 //! impl<T: AsyncRead + AsyncWrite + 'static> ServerProto<T> for FramedMsgpackRpcProto {
-//!    type Request = Value;
-//!    type Response = Value;
+//!    type Request = Message;
+//!    type Response = Message;
 //!    type Transport = Framed<T, Codec>
 //!    type BindTransport = Result<Self::Transport, io::Error>;
 //!
@@ -34,5 +34,5 @@ extern crate tokio_io;
 pub use self::codec::Codec;
 
 mod codec;
-mod message;
+pub mod message;
 
