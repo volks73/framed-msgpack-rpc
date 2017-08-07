@@ -1,0 +1,23 @@
+[package]
+name = "framed-msgpack-rpc"
+description = "A MessagePack-RPC codec with a prefixed length for use with tokio-rs"
+version = "0.0.1"
+authors = ["Christopher Field <cfield2@gmail.com>"]
+license-file = "LICENSE"
+readme = "README.md"
+keywords = ["MessagePack", "msgpack", "framed", "codec", "framing", "rpc", "Remote Procedure Call"]
+categories = ["encoding", "decoding", "value-formatting"]
+homepage = "https://github.com/volks73/framed-msgpack-rpc"
+repository = "https://github.com/volks73/framed-msgpack-rpc"
+
+[dependencies]
+bytes = "0.4"
+framed-msgpack = { git = "https://github.com/volks73/framed-msgpack.git" }
+futures = "0.1"
+rmpv = "0.4"
+tokio-io = "0.1"
+
+[dev-dependencies]
+tokio-proto = "0.1"
+tokio-service = "0.1"
+
