@@ -31,3 +31,8 @@ extern crate futures;
 extern crate rmpv;
 extern crate tokio_io;
 
+pub use self::codec::Codec;
+
+mod codec;
+mod message;
+
