@@ -1,6 +1,6 @@
 // Portions of this were taken from the [rmp-rpc](https://github.com/little-dude/rmp-rpc) project.
 
-//! Building blocks for building a `Framed-MessagePack-RPC` servers.
+//! Building blocks for building a `Framed-MessagePack-RPC` server.
 
 use codec::Codec;
 use futures::{Async, BoxFuture, Future, Poll, Sink, Stream};
@@ -18,14 +18,18 @@ pub trait Handler: Clone {
     type T: Into<Value>;
     type E: Into<Value>;
 
-    /// Handle a `MessagePack-RPC` request
+    /// Handle a `MessagePack-RPC` request.
+    ///
+    /// The framing is handled automatically by the codec.
     fn handle_request(&mut self, method: &str, params: &[Value]) -> BoxFuture<Result<Self::T, Self::E>, Self::Error>;
 
-    /// Handle a `MessagePack-RPC` notification
+    /// Handle a `MessagePack-RPC` notification.
+    ///
+    /// The framing is handled automatically by the codec.
     fn handle_notification(&mut self, method: &str, params: &[Value]) -> BoxFuture<(), Self::Error>;
 }
 
-/// A MessagePack-RPC server that can handle requests and notifications.
+/// A Framed-Msgpack-RPC server that can handle requests and notifications.
 pub struct Server<T: AsyncRead + AsyncWrite, H: Handler> {
     handler: H,
     io: Framed<T, Codec>,
