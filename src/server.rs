@@ -1,5 +1,7 @@
 // Portions of this were taken from the [rmp-rpc](https://github.com/little-dude/rmp-rpc) project.
 
+//! Building blocks for building a `Framed-MessagePack-RPC` servers.
+
 use codec::Codec;
 use futures::{Async, BoxFuture, Future, Poll, Sink, Stream};
 use message::{Message, Response};
@@ -101,14 +103,9 @@ impl<T: AsyncRead + AsyncWrite + 'static, H: Handler + 'static> Server<T, H> {
                 Async::NotReady => continue,
             }
         }
-
         for idx in done.iter_mut().rev() {
             let _ = self.request_tasks.remove(idx);
         }
-    }
-
-    fn flush(&mut self) {
-        self.io.poll_complete().unwrap();
     }
 }
 
@@ -117,18 +114,14 @@ impl<T: AsyncRead + AsyncWrite + 'static, H: Handler + 'static> Future for Serve
     type Error = io::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        loop {
-            match self.io.poll().unwrap() {
-                Async::Ready(Some(msg)) => self.handle_msg(msg),
-                Async::Ready(None) => {
-                    return Ok(Async::Ready(()));
-                }
-                Async::NotReady => break,
-            }
+        let item = try_ready!(self.io.poll());
+        match item {
+            Some(msg) => self.handle_msg(msg),
+            None => {},
         }
         self.process_notifications();
         self.process_requests();
-        self.flush();
+        self.io.poll_complete().unwrap();
         Ok(Async::NotReady)
     }
 }

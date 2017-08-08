@@ -18,6 +18,7 @@ rmpv = "0.4"
 tokio-io = "0.1"
 
 [dev-dependencies]
+tokio-core = "0.1"
 tokio-proto = "0.1"
 tokio-service = "0.1"
 

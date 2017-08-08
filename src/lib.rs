@@ -27,6 +27,7 @@
 
 extern crate bytes;
 extern crate framed_msgpack;
+#[macro_use]
 extern crate futures;
 extern crate rmpv;
 extern crate tokio_io;
