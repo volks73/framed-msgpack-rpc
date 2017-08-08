@@ -1,3 +1,10 @@
+//! A simple framed-msgpack-rpc server.
+//!
+//! Only one method is implemented: `sayHello`. If a `sayHello` request is received, the server
+//! will return with a `Hello World` response. If a notification is received, then the
+//! notification's method is printed to stdout. If an unknown method is received, then a response
+//! with an error message is transmitted.
+
 extern crate framed_msgpack_rpc;
 extern crate futures;
 extern crate rmpv;
