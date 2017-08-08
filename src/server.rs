@@ -109,8 +109,7 @@ impl<T: AsyncRead + AsyncWrite + 'static, H: Handler + 'static> Future for Serve
     type Error = io::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let item = try_ready!(self.io.poll());
-        match item {
+        match try_ready!(self.io.poll()) {
             Some(msg) => self.handle_msg(msg),
             None => {},
         }
