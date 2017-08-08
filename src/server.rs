@@ -13,7 +13,7 @@ use tokio_io::{AsyncRead, AsyncWrite};
 use tokio_io::codec::Framed;
 
 /// The `Handler` trait defines how the server handles the requests and notifications it receives.
-pub trait Handler {
+pub trait Handler: Clone {
     type Error: Error;
     type T: Into<Value>;
     type E: Into<Value>;
@@ -23,15 +23,6 @@ pub trait Handler {
 
     /// Handle a `MessagePack-RPC` notification
     fn handle_notification(&mut self, method: &str, params: &[Value]) -> BoxFuture<(), Self::Error>;
-}
-
-/// Since a new `Handler` is created for each client, it is necessary to have a builder type that
-/// implements the `HandlerBuilder` trait.
-pub trait HandlerBuilder {
-    type Handler: Handler + 'static;
-
-    /// Creates the handler.
-    fn build(&self) -> Self::Handler;
 }
 
 /// A MessagePack-RPC server that can handle requests and notifications.
