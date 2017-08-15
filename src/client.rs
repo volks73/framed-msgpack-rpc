@@ -112,7 +112,6 @@ impl Client {
                 }
                 Err(())
             });
-
         handle.spawn(client);
         connection
     }
@@ -137,13 +136,13 @@ impl Clone for Client {
 }
 
 struct Endpoint {
-    stream: Framed<TcpStream, Codec>,
-    request_id: u32,
-    shutdown: bool,
-    requests_rx: mpsc::UnboundedReceiver<(Request, oneshot::Sender<Result<Value, Value>>)>,
     notifications_rx: mpsc::UnboundedReceiver<(Notification, oneshot::Sender<()>)>,
-    pending_requests: HashMap<u32, oneshot::Sender<Result<Value, Value>>>,
     pending_notifications: Vec<oneshot::Sender<()>>,
+    pending_requests: HashMap<u32, oneshot::Sender<Result<Value, Value>>>,
+    request_id: u32,
+    requests_rx: mpsc::UnboundedReceiver<(Request, oneshot::Sender<Result<Value, Value>>)>,
+    shutdown: bool,
+    stream: Framed<TcpStream, Codec>,
 }
 
 impl Endpoint {
@@ -241,10 +240,10 @@ impl Future for Endpoint {
 
 /// A future that returns a `Endpoint` when it completes successfully.
 pub struct Connection {
-    client_rx: oneshot::Receiver<Client>,
     client_chan_cancelled: bool,
-    error_rx: oneshot::Receiver<io::Error>,
+    client_rx: oneshot::Receiver<Client>,
     error_chan_cancelled: bool,
+    error_rx: oneshot::Receiver<io::Error>,
 }
 
 impl Connection {
