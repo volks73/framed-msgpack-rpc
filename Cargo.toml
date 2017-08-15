@@ -15,10 +15,10 @@ bytes = "0.4"
 framed-msgpack = { git = "https://github.com/volks73/framed-msgpack.git" }
 futures = "0.1"
 rmpv = "0.4"
+tokio-core = "0.1"
 tokio-io = "0.1"
 
 [dev-dependencies]
-tokio-core = "0.1"
 tokio-proto = "0.1"
 tokio-service = "0.1"
 

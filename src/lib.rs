@@ -30,10 +30,12 @@ extern crate framed_msgpack;
 #[macro_use]
 extern crate futures;
 extern crate rmpv;
+extern crate tokio_core;
 extern crate tokio_io;
 
 pub use self::codec::Codec;
 
+pub mod client;
 mod codec;
 pub mod message;
 pub mod server;
