@@ -49,26 +49,31 @@ impl<T: AsyncRead + AsyncWrite + 'static, H: Handler + 'static> Server<T, H> {
     }
 
     fn handle_msg(&mut self, msg: Message) {
+        trace!("handle_msg");
         match msg {
             Message::Request(request) => {
+                trace!("message is a request");
                 let method = request.method.as_str();
                 let params = request.params;
                 let response = self.handler.handle_request(method, &params);
                 self.request_tasks.insert(request.id, response);
             }
             Message::Notification(notification) => {
+                trace!("message is a notification");
                 let method = notification.method.as_str();
                 let params = notification.params;
                 let outcome = self.handler.handle_notification(method, &params);
                 self.notification_tasks.push(outcome);
             }
             Message::Response(_) => {
+                trace!("message is a response");
                 return;
             }
         }
     }
 
     fn process_notifications(&mut self) {
+        trace!("process_notifications");
         let mut done = vec![];
         for (idx, task) in self.notification_tasks.iter_mut().enumerate() {
             match task.poll().unwrap() {
@@ -82,6 +87,7 @@ impl<T: AsyncRead + AsyncWrite + 'static, H: Handler + 'static> Server<T, H> {
     }
 
     fn process_requests(&mut self) {
+        trace!("process_requests");
         let mut done = vec![];
         for (id, task) in &mut self.request_tasks {
             match task.poll().unwrap() {
@@ -109,9 +115,14 @@ impl<T: AsyncRead + AsyncWrite + 'static, H: Handler + 'static> Future for Serve
     type Error = io::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        match try_ready!(self.io.poll()) {
-            Some(msg) => self.handle_msg(msg),
-            None => {},
+        loop {
+            match self.io.poll().unwrap() {
+                Async::Ready(Some(msg)) => self.handle_msg(msg),
+                Async::Ready(None) => {
+                    return Ok(Async::Ready(()));
+                }
+                Async::NotReady => break,
+            }
         }
         self.process_notifications();
         self.process_requests();

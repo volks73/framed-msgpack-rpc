@@ -12,8 +12,10 @@ repository = "https://github.com/volks73/framed-msgpack-rpc"
 
 [dependencies]
 bytes = "0.4"
+env_logger = "*"
 framed-msgpack = { git = "https://github.com/volks73/framed-msgpack.git" }
 futures = "0.1"
+log = "*"
 rmpv = "0.4"
 tokio-core = "0.1"
 tokio-io = "0.1"

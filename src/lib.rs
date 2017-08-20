@@ -26,9 +26,11 @@
 //! ```
 
 extern crate bytes;
+extern crate env_logger;
 extern crate framed_msgpack;
-#[macro_use]
 extern crate futures;
+#[macro_use]
+extern crate log;
 extern crate rmpv;
 extern crate tokio_core;
 extern crate tokio_io;
