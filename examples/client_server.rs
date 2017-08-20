@@ -29,17 +29,17 @@ impl Handler for ExampleHandler {
     type E = String;
 
     fn handle_request(&mut self, method: &str, params: &[Value]) -> BoxFuture<Result<Self::T, Self::E>, Self::Error> {
-        if method != "hello" {
-            return box_ok(Err(format!("Unknown method {}", method)));
+        if method != "sayHello" {
+            return box_ok(Err(format!("Unknown method '{}'", method)));
         }
 
         if params.len() != 1 {
-            return box_ok(Err(format!("Expected 1 argument for method \"hello\", got {}", params.len())));
+            return box_ok(Err(format!("Expected 1 argument for method 'sayHello', got {}", params.len())));
         }
 
         if let Value::String(ref string) = params[0] {
             if let Some(name) = string.as_str() {
-                return box_ok(Ok(format!("hello {}", name)));
+                return box_ok(Ok(format!("Hello {}!", name)));
             }
         }
         box_ok(Err("Invalid argument".into()))
@@ -52,7 +52,7 @@ impl Handler for ExampleHandler {
 
 fn main() {
     env_logger::init().unwrap();
-    let address: SocketAddr = "127.0.0.1:54321".parse().unwrap();
+    let address: SocketAddr = "127.0.0.1:12345".parse().unwrap();
 
     // Start the server
     thread::spawn(move || {
@@ -79,45 +79,25 @@ fn main() {
                 Err(())
             })
             .and_then(|client| {
-                client.request("hello", &["little-dude".into()]).and_then(
-                    |response| {
-                        println!("{:?}", response);
-                        client
-                            .notify("this should be printed :)", &[])
-                            .and_then(|_| Ok(client))
-                    },
-                )
+                client.request("sayHello", &["World".into()])
+                    .and_then(|response| { 
+                        println!("{:?}", response); 
+                        Ok(client)
+                    })
+            }) 
+            .and_then(|client| {
+                client.notify("This is a notification", &[])
+                    .and_then(|_| {
+                        Ok(client)
+                    })
             })
             .and_then(|client| {
-                client.request("dummy", &[]).and_then(|response| {
-                    println!("{:?}", response);
-                    Ok(())
-                })
-            }),
+                client.request("sayGoodbye", &[])
+                    .and_then(|response| { 
+                        println!("{:?}", response);
+                        Ok(())
+                    })
+            })
     );
-    //let _ = core.run(
-        //Client::connect(&address, &handle)
-            //.or_else(|e| {
-                //println!("Connection to server failed: {}", e);
-                //Err(())
-            //})
-            //.and_then(|client| {
-                //client.request("hello", &["World".into()])
-                    //.and_then(|response| { 
-                        //println!("{:?}", response); 
-                        //Ok(client)
-                    //})
-            //}) 
-            ////.and_then(|client| {
-                ////client.notify("this should be printed", &[])
-            ////})
-            //.and_then(|client| {
-                //client.request("dummy", &[])
-                    //.and_then(|response| { 
-                        //println!("{:?}", response);
-                        //Ok(client)
-                    //})
-            //})
-    //);
 }
 

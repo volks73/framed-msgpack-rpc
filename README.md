@@ -49,6 +49,20 @@ $ echo '[0,1,"sayHello",[]]' | panser --from json --to json --sized-output | nc 
 [1,1,null,"Hello World!"]
 ```
 
+### Client-Server Example ###
+
+```
+$ cargo run --example client_server
+```
+
+This will start a simple server on `localhost:12345` and connect a client to the server. The following should be printed to the terminal and the example completed.
+
+```
+Ok(String(Utf8String { s: Ok("Hello World!") }))
+This is a notification
+Err(String(Utf8String { s: Ok("Unknown method \'sayGoodbye\'") }))
+```
+
 ## License ##
 
 See the LICENSE file for more information about licensing and copyright.
