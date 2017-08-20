@@ -13,6 +13,9 @@ use tokio_core::reactor::Handle;
 use tokio_io::AsyncRead;
 use tokio_io::codec::Framed;
 
+/// A response from sending a request.
+///
+/// Since requests expect an eventual response, a future is needed.
 pub struct Response {
     inner: oneshot::Receiver<Result<Value, Value>>,
 }
@@ -26,6 +29,10 @@ impl Future for Response {
     }
 }
 
+/// An acknowledgement for sending a notification.
+///
+/// Since notifications are sent to a server without expecting a response, a placeholder-like
+/// future is need for sending a notification to allow chaining methods.
 pub struct Ack {
     inner: oneshot::Receiver<()>,
 }
@@ -39,7 +46,7 @@ impl Future for Ack {
     }
 }
 
-/// A client used to send request or notifications to a `Framed-MessagePack-RPC` server.
+/// A client used to send requests or notifications to a `Framed-MessagePack-RPC` server.
 pub struct Client {
     requests_tx: mpsc::UnboundedSender<(Request, oneshot::Sender<Result<Value, Value>>)>,
     notifications_tx: mpsc::UnboundedSender<(Notification, oneshot::Sender<()>)>,
@@ -48,6 +55,7 @@ pub struct Client {
 impl Client {
     /// Send a `Framed-MessagePack-RPC` request.
     pub fn request(&self, method: &str, params: &[Value]) -> Response {
+        trace!("Client: request (method = {}, params = {:?})", method, params);
         let request = Request {
             id: 0,
             method: method.to_owned(),
@@ -64,6 +72,7 @@ impl Client {
 
     /// Send a `Framed-MessagePack-RPC` notification.
     pub fn notify(&self, method: &str, params: &[Value]) -> Ack {
+        trace!("Client: notification (method = {}, params = {:?})", method, params);
         let notification = Notification {
             method: method.to_owned(),
             params: Vec::from(params),
@@ -75,6 +84,7 @@ impl Client {
 
     /// Connect the client to a remote `Framed-MessagePack-RPC` server.
     pub fn connect(addr: &SocketAddr, handle: &Handle) -> Connection {
+        trace!("Client: trying to connect to {}", addr);
         let (client_tx, client_rx) = oneshot::channel();
         let (error_tx, error_rx) = oneshot::channel();
 
@@ -87,6 +97,7 @@ impl Client {
 
         let client = TcpStream::connect(addr, handle)
             .and_then(|stream| {
+                trace!("Client: connection established");
                 let (requests_tx, requests_rx) = mpsc::unbounded();
                 let (notifications_tx, notifications_rx) = mpsc::unbounded();
                 let client = Client {
@@ -99,7 +110,7 @@ impl Client {
                 Endpoint {
                     request_id: 0,
                     shutdown: false,
-                    stream: stream.framed(Codec::new()),
+                    io: stream.framed(Codec::new()),
                     requests_rx: requests_rx,
                     notifications_rx: notifications_rx,
                     pending_requests: HashMap::new(),
@@ -107,6 +118,7 @@ impl Client {
                 }
             })
             .or_else(|e| {
+                error!("Client: connection failed");
                 if let Err(e) = error_tx.send(e) {
                     panic!("Failed to send client to connection: {:?}", e);
                 }
@@ -135,6 +147,7 @@ impl Clone for Client {
     }
 }
 
+/// An endpoint to a connection with a `Framed-Msgpack-RPC` server.
 struct Endpoint {
     notifications_rx: mpsc::UnboundedReceiver<(Notification, oneshot::Sender<()>)>,
     pending_notifications: Vec<oneshot::Sender<()>>,
@@ -142,7 +155,7 @@ struct Endpoint {
     request_id: u32,
     requests_rx: mpsc::UnboundedReceiver<(Request, oneshot::Sender<Result<Value, Value>>)>,
     shutdown: bool,
-    stream: Framed<TcpStream, Codec>,
+    io: Framed<TcpStream, Codec>,
 }
 
 impl Endpoint {
@@ -161,7 +174,7 @@ impl Endpoint {
         loop {
             match self.notifications_rx.poll().unwrap() {
                 Async::Ready(Some((notification, ack_sender))) => {
-                    let send_task = self.stream
+                    let send_task = self.io
                         .start_send(Message::Notification(notification))
                         .unwrap();
                     if !send_task.is_ready() {
@@ -184,7 +197,7 @@ impl Endpoint {
                 Async::Ready(Some((mut request, response_sender))) => {
                     self.request_id += 1;
                     request.id = self.request_id;
-                    let send_task = self.stream.start_send(Message::Request(request)).unwrap();
+                    let send_task = self.io.start_send(Message::Request(request)).unwrap();
                     if !send_task.is_ready() {
                         panic!("the sink is full")
                     }
@@ -201,7 +214,7 @@ impl Endpoint {
     }
 
     fn flush(&mut self) {
-        if self.stream.poll_complete().unwrap().is_ready() {
+        if self.io.poll_complete().unwrap().is_ready() {
             for ack_sender in self.pending_notifications.drain(..) {
                 ack_sender.send(()).unwrap();
             }
@@ -215,7 +228,7 @@ impl Future for Endpoint {
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
-            match self.stream.poll().unwrap() {
+            match self.io.poll().unwrap() {
                 Async::Ready(Some(msg)) => self.handle_msg(msg),
                 Async::Ready(None) => {
                     return Ok(Async::Ready(()));

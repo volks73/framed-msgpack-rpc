@@ -49,31 +49,34 @@ impl<T: AsyncRead + AsyncWrite + 'static, H: Handler + 'static> Server<T, H> {
     }
 
     fn handle_msg(&mut self, msg: Message) {
-        trace!("handle_msg");
+        trace!("Server: handle message");
         match msg {
             Message::Request(request) => {
-                trace!("message is a request");
+                debug!("Server: message is a request");
                 let method = request.method.as_str();
                 let params = request.params;
+                trace!("Server: request (method = {}, params = {:?})", method, params);
                 let response = self.handler.handle_request(method, &params);
                 self.request_tasks.insert(request.id, response);
             }
             Message::Notification(notification) => {
-                trace!("message is a notification");
+                debug!("Server: message is a notification");
                 let method = notification.method.as_str();
                 let params = notification.params;
+                trace!("Server: notification (method = {}, params = {:?})", method, params);
                 let outcome = self.handler.handle_notification(method, &params);
                 self.notification_tasks.push(outcome);
             }
-            Message::Response(_) => {
-                trace!("message is a response");
+            Message::Response(response) => {
+                debug!("Server: message is a response");
+                trace!("Server: response ({:?})", response);
                 return;
             }
         }
     }
 
     fn process_notifications(&mut self) {
-        trace!("process_notifications");
+        trace!("Server: process notifications");
         let mut done = vec![];
         for (idx, task) in self.notification_tasks.iter_mut().enumerate() {
             match task.poll().unwrap() {
@@ -87,7 +90,7 @@ impl<T: AsyncRead + AsyncWrite + 'static, H: Handler + 'static> Server<T, H> {
     }
 
     fn process_requests(&mut self) {
-        trace!("process_requests");
+        trace!("Server: process requests");
         let mut done = vec![];
         for (id, task) in &mut self.request_tasks {
             match task.poll().unwrap() {

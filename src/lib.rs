@@ -26,7 +26,6 @@
 //! ```
 
 extern crate bytes;
-extern crate env_logger;
 extern crate framed_msgpack;
 extern crate futures;
 #[macro_use]
