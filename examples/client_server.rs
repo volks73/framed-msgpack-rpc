@@ -8,7 +8,6 @@ use framed_msgpack_rpc::server::{Handler, Server};
 use framed_msgpack_rpc::client::Client;
 use futures::{future, BoxFuture, Future, Stream};
 use rmpv::Value;
-use std::marker::Send;
 use std::io;
 use std::thread;
 use std::time::Duration;
@@ -19,34 +18,38 @@ use tokio_core::reactor::Core;
 #[derive(Clone)]
 pub struct ExampleHandler;
 
-fn box_ok<T: Send + 'static, E: Send + 'static>(t: T) -> BoxFuture<T, E> {
-    Box::new(future::ok(t))
-}
-
 impl Handler for ExampleHandler {
     type Error = io::Error;
     type T = String;
     type E = String;
 
     fn handle_request(&mut self, method: &str, params: &[Value]) -> BoxFuture<Result<Self::T, Self::E>, Self::Error> {
-        if method != "sayHello" {
-            return box_ok(Err(format!("Unknown method '{}'", method)));
-        }
-
-        if params.len() != 1 {
-            return box_ok(Err(format!("Expected 1 argument for method 'sayHello', got {}", params.len())));
-        }
-
-        if let Value::String(ref string) = params[0] {
-            if let Some(name) = string.as_str() {
-                return box_ok(Ok(format!("Hello {}!", name)));
+        Box::new(
+            match method {
+                "sayHello" => {
+                    if params.len() != 1 {
+                        future::ok(Err(format!("Expected 1 argument for method 'sayHello', got {}", params.len())))
+                    } else {
+                        if let Value::String(ref s) = params[0] {
+                            if let Some(name) = s.as_str() {
+                                future::ok(Ok(format!("Hello {}!", name)))
+                            } else {
+                                future::ok(Err(format!("Expected string")))
+                            }
+                        } else {
+                            future::ok(Err("Invalid parameter".into()))
+                        }
+                    }
+                },
+                method => {
+                    future::ok(Err(format!("Unknown method '{}'", method)))
+                }
             }
-        }
-        box_ok(Err("Invalid argument".into()))
+        )
     }
 
     fn handle_notification(&mut self, method: &str, _params: &[Value]) -> BoxFuture<(), Self::Error> {
-        box_ok(println!("{}", method))
+        Box::new(future::ok(println!("{}", method)))
     }
 }
 

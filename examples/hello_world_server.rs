@@ -33,7 +33,7 @@ impl Handler for ExampleHandler {
                 },
                 method => {
                     future::ok(Err(format!("Unknown method '{}'", method)))
-                },
+                }
             }
         )
     }
